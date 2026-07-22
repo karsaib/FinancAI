@@ -25,12 +25,32 @@ function App() {
     loadTransactions(); // Fetch all saved transactions from local database
   }, []); // Empty dependency array = run only on mount
   
+  // Get current month start and end dates
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  // --- ÖSSZES IDŐSZAK ---
   // Calculate total balance (income - expenses)
   const total = transactions.reduce((sum, t) => sum + t.amount, 0);
   // Calculate total income (only positive amounts)
   const income = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
   // Calculate total expenses (only negative amounts, convert to positive for display)
   const expense = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+  // --- AKTUÁLIS HÓNAP ---
+  // Filter transactions for current month
+  const currentMonthTransactions = transactions.filter(t => {
+    const date = new Date(t.date);
+    return date >= currentMonthStart && date <= currentMonthEnd;
+  });
+
+  // Calculate current month balance
+  const monthTotal = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0);
+  // Calculate current month income
+  const monthIncome = currentMonthTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+  // Calculate current month expenses
+  const monthExpense = currentMonthTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
   // Show loading spinner while fetching data from database
   if (loading) {
@@ -88,24 +108,65 @@ function App() {
           gap: '1rem',
           marginBottom: '2rem'
         }}>
-          <div className="summary-card">
-            <p>Összes bevétel</p>
-            <p className="amount" style={{ color: '#10b981' }}>
-              +{income.toLocaleString('hu-HU')} Ft
-            </p>
-          </div>
+          {/* ÖSSZES BEVÉTEL */}
+<div className="summary-card">
+  <p>Bevétel</p>
+  <p className="amount" style={{ color: '#10b981' }}>
+    📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: +{monthIncome.toLocaleString('hu-HU')} Ft
+  </p>
+  <div style={{ 
+    fontSize: '0.875rem', 
+    color: '#6b7280',
+    marginTop: '0.25rem',
+    borderTop: '1px solid #e5e7eb',
+    paddingTop: '0.25rem'
+  }}>
+    <p>Összes</p>
+    <p className="amount" style={{ color: '#10b981' }}>
+      +{income.toLocaleString('hu-HU')} Ft
+    </p>
+  </div>
+</div>
           
+          {/* ÖSSZES KIADÁS */}
           <div className="summary-card">
-            <p>Összes kiadás</p>
-            <p className="amount" style={{ color: '#ef4444' }}>
+            <p>Kiadás</p>
+             <p className="amount" style={{ color: '#ef4444' }}>
+        📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: -{monthExpense.toLocaleString('hu-HU')} Ft
+        </p>
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: '#6b7280',
+              marginTop: '0.25rem',
+              borderTop: '1px solid #e5e7eb',
+              paddingTop: '0.25rem'
+            }}>
+              <p>Összes</p>
+                  <p className="amount" style={{ color: '#ef4444' }}>
               -{expense.toLocaleString('hu-HU')} Ft
             </p>
+              
+            </p>
           </div>
           
+          {/* EGYENLEG */}
           <div className="summary-card">
             <p>Egyenleg</p>
             <p className="amount" style={{ color: total >= 0 ? '#4f46e5' : '#ef4444' }}>
-              {total.toLocaleString('hu-HU')} Ft
+                📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: {monthTotal.toLocaleString('hu-HU')} Ft
+        
+            </p>
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: monthTotal >= 0 ? '#4f46e5' : '#ef4444',
+              marginTop: '0.25rem',
+              borderTop: '1px solid #e5e7eb',
+              paddingTop: '0.25rem'
+            }}>
+              <p>Összes</p>
+             <p className="amount" style={{ color: total >= 0 ? '#4f46e5' : '#ef4444' }}>
+                {total.toLocaleString('hu-HU')} Ft
+             </p>
             </p>
           </div>
         </div>
