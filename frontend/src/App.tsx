@@ -10,12 +10,14 @@ import Statistics from './components/Statistics';
 import ExportImport from './components/ExportImport';
 // Import category manager component
 import CategoryManager from './components/CategoryManager';
+// Import bank upload component
+import BankUpload from './components/BankUpload';
 // Import Zustand store hook for state management
 import { useTransactionStore } from './store/transactionStore';
 
 function App() {
-  // State for active tab
-  const [activeTab, setActiveTab] = useState<'transactions' | 'statistics' | 'categories' | 'backup'>('transactions');
+  // State for active tab (hozzáadva a 'bankupload' fül)
+  const [activeTab, setActiveTab] = useState<'transactions' | 'bankupload' | 'statistics' | 'categories' | 'backup'>('transactions');
   
   // Transactions array, load function, and loading state from the store
   const { transactions, loadTransactions, loading } = useTransactionStore();
@@ -109,32 +111,12 @@ function App() {
           marginBottom: '2rem'
         }}>
           {/* ÖSSZES BEVÉTEL */}
-<div className="summary-card">
-  <p>Bevétel</p>
-  <p className="amount" style={{ color: '#10b981' }}>
-    📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: +{monthIncome.toLocaleString('hu-HU')} Ft
-  </p>
-  <div style={{ 
-    fontSize: '0.875rem', 
-    color: '#6b7280',
-    marginTop: '0.25rem',
-    borderTop: '1px solid #e5e7eb',
-    paddingTop: '0.25rem'
-  }}>
-    <p>Összes</p>
-    <p className="amount" style={{ color: '#10b981' }}>
-      +{income.toLocaleString('hu-HU')} Ft
-    </p>
-  </div>
-</div>
-          
-          {/* ÖSSZES KIADÁS */}
           <div className="summary-card">
-            <p>Kiadás</p>
-             <p className="amount" style={{ color: '#ef4444' }}>
-        📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: -{monthExpense.toLocaleString('hu-HU')} Ft
-        </p>
-            <p style={{ 
+            <p>Bevétel</p>
+            <p className="amount" style={{ color: '#10b981' }}>
+              📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: +{monthIncome.toLocaleString('hu-HU')} Ft
+            </p>
+            <div style={{ 
               fontSize: '0.875rem', 
               color: '#6b7280',
               marginTop: '0.25rem',
@@ -142,21 +124,39 @@ function App() {
               paddingTop: '0.25rem'
             }}>
               <p>Összes</p>
-                  <p className="amount" style={{ color: '#ef4444' }}>
-              -{expense.toLocaleString('hu-HU')} Ft
+              <p className="amount" style={{ color: '#10b981' }}>
+                +{income.toLocaleString('hu-HU')} Ft
+              </p>
+            </div>
+          </div>
+          
+          {/* ÖSSZES KIADÁS */}
+          <div className="summary-card">
+            <p>Kiadás</p>
+            <p className="amount" style={{ color: '#ef4444' }}>
+              📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: -{monthExpense.toLocaleString('hu-HU')} Ft
             </p>
-              
-            </p>
+            <div style={{ 
+              fontSize: '0.875rem', 
+              color: '#6b7280',
+              marginTop: '0.25rem',
+              borderTop: '1px solid #e5e7eb',
+              paddingTop: '0.25rem'
+            }}>
+              <p>Összes</p>
+              <p className="amount" style={{ color: '#ef4444' }}>
+                -{expense.toLocaleString('hu-HU')} Ft
+              </p>
+            </div>
           </div>
           
           {/* EGYENLEG */}
           <div className="summary-card">
             <p>Egyenleg</p>
             <p className="amount" style={{ color: total >= 0 ? '#4f46e5' : '#ef4444' }}>
-                📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: {monthTotal.toLocaleString('hu-HU')} Ft
-        
+              📅 {now.getFullYear()}. {now.getMonth() + 1}. hó: {monthTotal.toLocaleString('hu-HU')} Ft
             </p>
-            <p style={{ 
+            <div style={{ 
               fontSize: '0.875rem', 
               color: monthTotal >= 0 ? '#4f46e5' : '#ef4444',
               marginTop: '0.25rem',
@@ -164,10 +164,10 @@ function App() {
               paddingTop: '0.25rem'
             }}>
               <p>Összes</p>
-             <p className="amount" style={{ color: total >= 0 ? '#4f46e5' : '#ef4444' }}>
+              <p className="amount" style={{ color: total >= 0 ? '#4f46e5' : '#ef4444' }}>
                 {total.toLocaleString('hu-HU')} Ft
-             </p>
-            </p>
+              </p>
+            </div>
           </div>
         </div>
         
@@ -195,6 +195,25 @@ function App() {
           >
             📝 Tranzakciók
           </button>
+
+          {/* ÚJ BANKI IMPORT FÜL */}
+          <button
+            onClick={() => setActiveTab('bankupload')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: activeTab === 'bankupload' ? 'bold' : 'normal',
+              color: activeTab === 'bankupload' ? '#4f46e5' : '#6b7280',
+              borderBottom: activeTab === 'bankupload' ? '2px solid #4f46e5' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            🏦 Banki import
+          </button>
+
           <button
             onClick={() => setActiveTab('statistics')}
             style={{
@@ -252,6 +271,7 @@ function App() {
             <TransactionList />
           </>
         )}
+        {activeTab === 'bankupload' && <BankUpload />}
         {activeTab === 'statistics' && <Statistics />}
         {activeTab === 'categories' && <CategoryManager />}
         {activeTab === 'backup' && <ExportImport />}

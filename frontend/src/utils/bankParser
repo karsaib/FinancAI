@@ -1,0 +1,53 @@
+import Papa from 'papaparse';
+
+export interface Transaction {
+  date: string;
+  type: string;
+  amount: number;
+  currency: string;
+  description: string;
+  partner: string;
+}
+
+export const parseBankStatementCSV = (file: File): Promise<Transaction[]> => {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: false,
+      delimiter: ';',
+      encoding: 'UTF-8',
+      complete: (results) => {
+        try {
+          const rows = results.data as string[][];
+          // Az első 3 sor metaadat, a 4. sor a fejléc (index 3)
+          const dataRows = rows.slice(4); 
+          
+          const transactions: Transaction[] = dataRows
+            .filter(row => row.length > 2 && row[2]) // Csak az érvényes sorok
+            .map(row => {
+              // Összeg tisztítása: pl. "-4 900,00" -> -4900.00
+              const rawAmount = row[2] || '0';
+              const cleanAmount = parseFloat(
+                rawAmount.replace(/\s/g, '').replace(',', '.')
+              );
+
+              return {
+                date: row[9]?.replace(/\./g, '-') || '', // Tranzakció dátuma
+                type: row[1] || '',                      // Megbízás típusa
+                amount: cleanAmount,
+                currency: row[3] || 'HUF',
+                description: row[8] || row[17] || '',    // Közlemény vagy kieg. infó
+                partner: row[5] || ''                    // Ellenoldali számla tulajdonosa
+              };
+            });
+
+          resolve(transactions);
+        } catch (error) {
+          reject(error);
+        }
+      },
+      error: (error) => {
+        reject(error);
+      }
+    });
+  });
+};

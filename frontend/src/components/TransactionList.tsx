@@ -50,7 +50,6 @@ const TransactionList = () => {
   return (
     <div className="table-container"> {/* CSS class for styling */}
       <h2 className="table-title">📋 Tranzakciók listája</h2> {/* "Transaction list" */}
-      
       {/* Horizontal scroll wrapper for mobile responsiveness */}
       <div style={{ overflowX: 'auto' }}>
         <table className="transaction-table">

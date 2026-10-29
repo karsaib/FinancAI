@@ -4,17 +4,33 @@ import { useTransactionStore } from '../store/transactionStore';
 
 // Export/Import component
 const ExportImport = () => {
-  const { transactions, importTransactions } = useTransactionStore();
+  const { transactions, importTransactions, deleteAllTransactions } = useTransactionStore();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState('');
+
+  const handleDeleteAll = async () => {
+    const confirmed = window.confirm(
+      'BIZTOSAN törölni szeretnéd az ÖSSZES tranzakciót? Ez a művelet nem vonható vissza!'
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      await deleteAllTransactions();
+      setDeleteMessage('Minden tranzakció sikeresen törölve! 🗑️');
+      setTimeout(() => setDeleteMessage(''), 4000);
+    } catch (error) {
+      setDeleteMessage('Hiba történt a törlés során.');
+    }
+  };
 
   // Export transactions to JSON file
   const handleExport = () => {
     try {
       setIsExporting(true);
       
-      // Prepare data for export
       const exportData = {
         version: '1.0',
         exportDate: new Date().toISOString(),
@@ -29,22 +45,17 @@ const ExportImport = () => {
         }))
       };
       
-      // Convert to JSON string with pretty formatting
       const jsonString = JSON.stringify(exportData, null, 2);
-      
-      // Create blob and download link
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `financia_export_${new Date().toISOString().split('T')[0]}.json`;
       
-      // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      // Clean up
       URL.revokeObjectURL(url);
       
       setImportMessage({ type: 'success', text: `✅ Sikeres export! ${transactions.length} tranzakció mentve.` });
@@ -73,20 +84,16 @@ const ExportImport = () => {
         const content = e.target?.result as string;
         const importedData = JSON.parse(content);
         
-        // Validate imported data structure
         let transactionsToImport = [];
         
         if (importedData.transactions && Array.isArray(importedData.transactions)) {
-          // New format with metadata
           transactionsToImport = importedData.transactions;
         } else if (Array.isArray(importedData)) {
-          // Old format (just array of transactions)
           transactionsToImport = importedData;
         } else {
           throw new Error('Invalid file format');
         }
         
-        // Validate each transaction
         const validTransactions = transactionsToImport.filter(t => 
           t.id && 
           t.name && 
@@ -99,7 +106,6 @@ const ExportImport = () => {
           throw new Error('No valid transactions found in file');
         }
         
-        // Confirm import
         const confirmed = window.confirm(
           `Biztosan importálod ${validTransactions.length} tranzakciót?\n\n` +
           `FIGYELEM: Ez hozzáfűzi a meglévő tranzakcióidhoz, nem felülírja!\n` +
@@ -108,11 +114,10 @@ const ExportImport = () => {
         
         if (!confirmed) {
           setIsImporting(false);
-          event.target.value = ''; // Reset file input
+          event.target.value = '';
           return;
         }
         
-        // Import transactions
         await importTransactions(validTransactions);
         
         setImportMessage({ 
@@ -130,7 +135,7 @@ const ExportImport = () => {
         setTimeout(() => setImportMessage(null), 5000);
       } finally {
         setIsImporting(false);
-        event.target.value = ''; // Reset file input
+        event.target.value = '';
       }
     };
     
@@ -260,6 +265,44 @@ const ExportImport = () => {
           <strong>💡 Tipp:</strong> Az exportált fájlt bármikor visszatöltheted. 
           Az importálás hozzáfűzi az adatokat a meglévőkhöz, nem törli azokat!
           Készíts rendszeres biztonsági mentést a pénzügyi adataidról.
+        </div>
+
+        {/* VESZÉLYES ZÓNA - MINDEN TRANZAKCIÓ TÖRLÉSE */}
+        <div style={{
+          marginTop: '1.5rem',
+          padding: '1rem',
+          border: '1px solid #fee2e2',
+          backgroundColor: '#fef2f2',
+          borderRadius: '0.5rem'
+        }}>
+          <h4 style={{ marginBottom: '0.5rem', color: '#991b1b', fontSize: '1rem', fontWeight: 'bold' }}>
+            ⚠️ Veszélyes zóna
+          </h4>
+          <p style={{ fontSize: '0.875rem', color: '#b91c1c', marginBottom: '1rem' }}>
+            Az összes rögzített tranzakció végleges törlése az adatbázisból.
+          </p>
+
+          <button
+            onClick={handleDeleteAll}
+            style={{
+              backgroundColor: '#dc2626',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '500'
+            }}
+          >
+            🗑️ Minden tranzakció törlése
+          </button>
+
+          {deleteMessage && (
+            <p style={{ marginTop: '0.75rem', fontWeight: 'bold', color: '#047857', fontSize: '0.875rem' }}>
+              {deleteMessage}
+            </p>
+          )}
         </div>
       </div>
     </div>

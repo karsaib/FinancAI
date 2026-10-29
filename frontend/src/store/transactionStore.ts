@@ -8,9 +8,9 @@ class FinanciaDB extends Dexie {
   
   constructor() {
     super('FinanciaDB');
-    this.version(2).stores({
+    this.version(3).stores({
       transactions: 'id, name, amount, category, date, createdAt',
-      categories: 'id, name, icon'
+      categories: 'id, name, icon, keywords'
     });
   }
 }
@@ -25,10 +25,11 @@ interface Transaction {
   createdAt: string;
 }
 
-interface Category {
+export interface Category {
   id: string;
   name: string;
   icon: string;
+  keywords?: string[];  
 }
 
 interface TransactionStore {
@@ -42,31 +43,91 @@ interface TransactionStore {
   addCategory: (category: Category) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   importTransactions: (transactions: Transaction[]) => Promise<void>;
+  deleteAllTransactions: () => Promise<void>;
+  recategorizeTransactions: () => Promise<void>;
 }
 
 const db = new FinanciaDB();
 
 // Default categories
 const defaultCategories: Category[] = [
-  { id: 'default1', name: 'Élelmiszer', icon: '🛒' },
-  { id: 'default2', name: 'Rezsi', icon: '💡' },
-  { id: 'default3', name: 'Közlekedés', icon: '🚗' },
+  { id: 'default1', name: 'Élelmiszer', icon: '🛒'},
+  { id: 'default2', name: 'Rezsi', icon: '💡'},
+  { id: 'default3', name: 'Közlekedés', icon: '🚗'},
   { id: 'default4', name: 'Szórakozás', icon: '🎬' },
   { id: 'default5', name: 'Egészség', icon: '🏥' },
   { id: 'default6', name: 'Fizetés', icon: '💰' },
   { id: 'default7', name: 'Ruha', icon: '👕' },
   { id: 'default8', name: 'Egyéb', icon: '📦' },
+  { id: 'default9', name: 'Étkezés', icon: '🍽️' },
 ];
 
-export const useTransactionStore = create<TransactionStore>((set, get) => ({
+export const useTransactionStore = create<TransactionStore>((set) => ({
   transactions: [],
   categories: [],
   loading: false,
+
+  recategorizeTransactions: async () => {
+    set({ loading: true });
+    try {
+      const currentTransactions = await db.transactions.toArray();
+      const currentCategories = await db.categories.toArray();
+
+      // Segédfüggvény az ékezetmentesítéshez
+      const removeAccents = (str: string) =>
+        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+      // Frissítjük a tranzakciók kategóriáját a kulcsszavak alapján
+      const updatedTransactions = currentTransactions.map(tx => {
+        const cleanDesc = removeAccents(tx.name);
+        let assignedCategory = 'Egyéb';
+
+        for (const cat of currentCategories) {
+          // 1. Ellenőrizzük magát a kategórianevet
+          if (cleanDesc.includes(removeAccents(cat.name))) {
+            assignedCategory = cat.name;
+            break;
+          }
+          // 2. Ellenőrizzük a kulcsszavakat
+          if (cat.keywords && Array.isArray(cat.keywords)) {
+            const matchedKeyword = cat.keywords.some(
+              kw => kw && cleanDesc.includes(removeAccents(kw))
+            );
+            if (matchedKeyword) {
+              assignedCategory = cat.name;
+              break;
+            }
+          }
+        }
+
+        return { ...tx, category: assignedCategory };
+      });
+
+      // Mentés az adatbázisba (bulkPut felülírja a létező azonosítójú elemeket)
+      await db.transactions.bulkPut(updatedTransactions);
+      set({ transactions: updatedTransactions, loading: false });
+    } catch (error) {
+      console.error('Hiba az újrakategorizáláskor:', error);
+      set({ loading: false });
+    }
+  },
   
   loadTransactions: async () => {
     set({ loading: true });
     const transactions = await db.transactions.toArray();
     set({ transactions, loading: false });
+  },
+
+  deleteAllTransactions: async () => {
+    set({ loading: true });
+    try {
+      await db.transactions.clear();
+      set({ transactions: [], loading: false });
+    } catch (error) {
+      console.error('Hiba az összes tranzakció törlésekor:', error);
+      set({ loading: false });
+      throw error;
+    }
   },
   
   loadCategories: async () => {
@@ -137,22 +198,6 @@ const initSampleData = async () => {
         amount: 350000,
         category: 'Fizetés',
         date: '2026-06-01',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: Date.now().toString() + '3',
-        name: 'Benzin',
-        amount: -15000,
-        category: 'Közlekedés',
-        date: '2026-06-02',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: Date.now().toString() + '4',
-        name: 'Mozi jegy',
-        amount: -3000,
-        category: 'Szórakozás',
-        date: '2026-06-04',
         createdAt: new Date().toISOString()
       }
     ];
